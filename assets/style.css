@@ -1,0 +1,153 @@
+/* =========================================================
+   Global Theme – Professional NHL Analytics Dashboard
+   ========================================================= */
+
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Roboto, 'Open Sans', Arial, sans-serif;
+    color: #333;
+    margin: 0;
+    padding: 0;
+}
+
+/* ------------------------------
+   Headings and Typography
+   ------------------------------ */
+h1, h2, h3, h4 {
+    color: #1f3c5b;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+
+h1 {
+    font-size: 2.1rem;
+}
+
+h2 {
+    font-size: 1.6rem;
+    margin-bottom: 1rem;
+}
+
+h3, h4 {
+    font-size: 1.3rem;
+}
+
+/* ------------------------------
+   Cards and Containers
+   ------------------------------ */
+.card {
+    background-color: #fff;
+    border: none;
+    border-radius: 12px;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+    padding: 20px;
+    margin-bottom: 20px;
+    transition: all 0.25s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+}
+
+/* ------------------------------
+   Graphs
+   ------------------------------ */
+.dash-graph {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 15px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
+    transition: box-shadow 0.3s ease, transform 0.3s ease;
+}
+
+.dash-graph:hover {
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+}
+
+/* ------------------------------
+   Tabs
+   ------------------------------ */
+.nav-tabs {
+    border-bottom: 2px solid #e5e5e5;
+}
+
+.nav-tabs .nav-link {
+    color: #1f3c5b;
+    font-weight: 500;
+    border: none;
+    transition: color 0.3s ease, background-color 0.3s ease;
+}
+
+.nav-tabs .nav-link.active {
+    background-color: #1f3c5b;
+    color: #fff !important;
+    border-radius: 6px 6px 0 0;
+    font-weight: 600;
+}
+
+.nav-tabs .nav-link:hover {
+    background-color: #e9ecef;
+    color: #1f3c5b;
+}
+
+/* ------------------------------
+   Data Table Enhancements
+   ------------------------------ */
+.dash-table-container {
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+    background: white;
+}
+
+.dash-table-container .dash-header {
+    background-color: #f0f2f5;
+    font-weight: 600;
+}
+
+.dash-table-container .dash-cell {
+    padding: 10px;
+}
+
+/* ------------------------------
+   Buttons and Inputs
+   ------------------------------ */
+button, .btn, .Select-control {
+    border-radius: 8px !important;
+}
+
+.Select-control {
+    box-shadow: none !important;
+    border: 1px solid #ccc !important;
+}
+
+.Select-control:hover {
+    border-color: #1f3c5b !important;
+}
+
+/* ------------------------------
+   Animations
+   ------------------------------ */
+@keyframes fadeIn {
+    0% { opacity: 0; transform: translateY(10px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.container, .card, .dash-graph {
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* ------------------------------
+   Footer
+   ------------------------------ */
+footer {
+    text-align: center;
+    color: #6c757d;
+    font-size: 0.9rem;
+    padding: 20px 0;
+    margin-top: 40px;
+    border-top: 1px solid #dee2e6;
+}
