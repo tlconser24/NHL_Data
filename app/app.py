@@ -403,4 +403,4 @@ app.layout = dbc.Container([
 # 11. Run App
 # --------------------------------------------------------------
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run_server(debug=True)
