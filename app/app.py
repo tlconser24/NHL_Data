@@ -529,7 +529,7 @@ def update_cap_efficiency_chart(selected_conf):
     df["goalDifferential"] = df["goalDifferential"].fillna(0)
 
     # Compute efficiency ratio based on your predictive salary modeling
-    df["Efficiency_Ratio"] = (df["Total_Spend_M"] - df["Overpay_M"]) / df["Total_Spend_M"]
+    df["Efficiency_Ratio"] = (df["Overpay_M"]) / df["Total_Spend_M"]
 
     # Bubble size = Points ROI on spending (Points per $1M spent)
     df["BubbleSize"] = (df["points"] / df["Total_Spend_M"])
@@ -545,7 +545,7 @@ def update_cap_efficiency_chart(selected_conf):
         df,
         x="Efficiency_Ratio",
         y="points",
-        size="BubbleSize",
+        size="Total_Spend_M",
         color="GoalTrend",
         hover_name="team",
         text="Team",
