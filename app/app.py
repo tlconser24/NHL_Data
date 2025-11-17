@@ -215,7 +215,9 @@ player_tab = dbc.Container([
 )
 def update_scatter(selected_pos):
     if player_preds_df.empty:
-        return px.scatter(title="No data available"), ""
+        fig = px.scatter(title="No data available")
+        fig.update_layout(**CHART_LAYOUT)
+        return fig, ""
     filtered_df = player_preds_df.copy()
     if selected_pos:
         filtered_df = filtered_df[filtered_df["Pos"] == selected_pos]
@@ -274,8 +276,10 @@ def categorize_ppg(row):
         else:
             return "Depth Role"
 
-if "PPG_Category" not in player_df.columns:
+if not player_df.empty and "PPG_Category" not in player_df.columns:
     player_df["PPG_Category"] = player_df.apply(categorize_ppg, axis=1)
+elif player_df.empty:
+    player_df["PPG_Category"] = pd.Series(dtype="object")
 
 player_df = (
     player_df.sort_values("Residual_M", ascending=False)
@@ -285,7 +289,7 @@ player_df = (
 player_df["Residual_M_Clipped"] = player_df["Residual_M"].clip(-5, 5)
 
 category_colors = {"Elite": "#2ca02c", "Very Good": "#1f77b4", "Solid Role": "#ff7f0e", "Depth Role": "#d62728"}
-position_options = [{"label": pos, "value": pos} for pos in sorted(player_df["Pos"].dropna().unique())]
+position_options_underpaid = [{"label": pos, "value": pos} for pos in sorted(player_df["Pos"].dropna().unique())]
 
 tab3 = dbc.Container([
     html.H2("💰 Top 25 Underpaid Players by Position", className="fw-bold text-center my-4", style={"color": "#1f3c5b"}),
@@ -295,7 +299,13 @@ tab3 = dbc.Container([
     dbc.Row([
         dbc.Col([
             html.Label("Select Position:", style={"fontWeight": "bold"}),
-            dcc.Dropdown(id="underpaid-position-filter", options=position_options, value="C", clearable=False, style={"marginBottom": "1rem"})
+            dcc.Dropdown(
+                id="underpaid-position-filter",
+                options=position_options_underpaid,
+                value=position_options_underpaid[0]["value"] if position_options_underpaid else None,
+                clearable=False,
+                style={"marginBottom": "1rem"}
+            )
         ], md=4)
     ], justify="center"),
 
@@ -308,7 +318,9 @@ tab3 = dbc.Container([
 )
 def update_underpaid_chart(selected_pos):
     if player_df.empty or not selected_pos:
-        return px.bar(title="No data available")
+        fig = px.bar(title="No data available")
+        fig.update_layout(**CHART_LAYOUT)
+        return fig
     pos_df = (
         player_df[player_df["Pos"] == selected_pos]
         .sort_values("Residual_M", ascending=True)
@@ -325,7 +337,14 @@ def update_underpaid_chart(selected_pos):
         color_discrete_map=category_colors,
         title=f"Top 25 Underpaid {selected_pos}s",
         labels={"Residual_M_Clipped": "Underpaid (Millions)", "PPG_Category": "Points per Game Tier"},
-        hover_data={"Team": True, "AAV_M": ":.2f", "Predicted_AAV_M": ":.2f", "Residual_M": ":.2f", "Points_per_game": ":.2f", "PPG_Category": True},
+        hover_data={
+            "Team": True,
+            "AAV_M": ":.2f",
+            "Predicted_AAV_M": ":.2f",
+            "Residual_M": ":.2f",
+            "Points_per_game": ":.2f",
+            "PPG_Category": True
+        },
     )
     fig.update_layout(**CHART_LAYOUT, height=fig_height)
     fig.update_traces(textposition="outside")
@@ -333,31 +352,57 @@ def update_underpaid_chart(selected_pos):
 
 
 # --------------------------------------------------------------
-# 9. Team Salary Efficiency Overview Tab
+# 9. Team Salary Efficiency Overview Tab + Standings Bubble View
 # --------------------------------------------------------------
 try:
     team_df = pd.read_csv(os.path.join(DATA_PATH, "player_predictions.csv"))
 except FileNotFoundError:
-    team_df = pd.DataFrame(columns=["Team", "AAV_M", "Predicted_AAV_M", "Residual_M"])
+    team_df = pd.DataFrame(columns=["Team", "AAV_M", "Predicted_AAV_M", "Residual_M", "Points_per_game"])
+
+# ---- Fix incorrect / inconsistent team names before grouping ----
+team_name_fixes = {
+    "Winnepeg Jets": "Winnipeg Jets",
+    "Las Vegas Golden Knights": "Vegas Golden Knights",
+    "Loas Angles Kings": "Los Angeles Kings",
+    "Seattle Kracken": "Seattle Kraken",
+    "Toronto Maple Leafers": "Toronto Maple Leafs",
+    "New York islanders": "New York Islanders",
+    "Utah Hockey Club (Mammoth)": "Utah Hockey Club",
+}
+
+team_df["Team"] = team_df["Team"].replace(team_name_fixes)
 
 if not team_df.empty:
     team_summary = (
         team_df.groupby("Team", as_index=False)
-        .agg(Total_Spend_M=("AAV_M", "sum"), Overpay_M=("Residual_M", "sum"), Avg_Points_Per_Game=("Points_per_game", "mean"))
+        .agg(
+            Total_Spend_M=("AAV_M", "sum"),
+            Overpay_M=("Residual_M", "sum"),
+            Avg_Points_Per_Game=("Points_per_game", "mean")
+        )
         .sort_values("Overpay_M", ascending=True)
     )
-    team_summary["Efficiency_Ratio"] = (team_summary["Total_Spend_M"] - team_summary["Overpay_M"]) / team_summary["Total_Spend_M"]
+    team_summary["Efficiency_Ratio"] = (
+        (team_summary["Total_Spend_M"] - team_summary["Overpay_M"]) / team_summary["Total_Spend_M"]
+    )
 
     spend_data = team_summary.sort_values("Total_Spend_M", ascending=False)
     spend_fig = px.bar(
-        spend_data, x="Team", y="Total_Spend_M", title="💰 Total Team Spending (AAV Sum, Millions)",
-        color="Total_Spend_M", color_continuous_scale="Blues",
+        spend_data,
+        x="Team",
+        y="Total_Spend_M",
+        title="💰 Total Team Spending (AAV Sum, Millions)",
+        color="Total_Spend_M",
+        color_continuous_scale="Blues",
         text=spend_data["Total_Spend_M"].round(1).astype(str) + "M"
     )
     overpay_fig = px.bar(
         team_summary.sort_values("Overpay_M", ascending=True),
-        x="Team", y="Overpay_M", title="⚖️ Team Contract Efficiency (Negative = Underpaid Roster)",
-        color="Overpay_M", color_continuous_scale="RdYlGn_r",
+        x="Team",
+        y="Overpay_M",
+        title="⚖️ Team Contract Efficiency (Negative = Underpaid Roster)",
+        color="Overpay_M",
+        color_continuous_scale="RdYlGn_r",
         text=team_summary["Overpay_M"].round(2).astype(str) + "M"
     )
     for fig in [spend_fig, overpay_fig]:
@@ -366,17 +411,159 @@ if not team_df.empty:
 else:
     team_summary = pd.DataFrame()
     spend_fig = px.bar(title="No team data available")
+    spend_fig.update_layout(**CHART_LAYOUT)
     overpay_fig = px.bar(title="No team data available")
+    overpay_fig.update_layout(**CHART_LAYOUT)
+
+# ---- NEW: Load team standings and build merged view for bubble chart ----
+try:
+    team_perf_df = pd.read_csv(os.path.join(DATA_PATH, "team", "team_standings_2025.csv"))
+except FileNotFoundError:
+    team_perf_df = pd.DataFrame()
+
+if not team_summary.empty and not team_perf_df.empty:
+    print("\n===== DEBUG: UNIQUE TEAM VALUES FROM PLAYER DATA =====")
+    print(team_summary["Team"].unique())
+    print("Count:", len(team_summary["Team"].unique()))
+
+    print("\n===== DEBUG: UNIQUE TEAM ABBREVIATIONS FROM STANDINGS =====")
+    print(team_perf_df["abbrev"].unique())
+    print("Count:", len(team_perf_df["abbrev"].unique()))
+
+    print("\n===== DEBUG: FULL STANDINGS TEAM NAMES =====")
+    print(team_perf_df["team"].unique())
+
+    # Try merge and inspect
+    debug_merge = team_summary.merge(
+        team_perf_df,
+        left_on="Team",
+        right_on="abbrev",
+        how="left"
+    )
+
+    print("\n===== DEBUG: MERGED SAMPLE (HEAD) =====")
+    print(debug_merge.head())
+
+    print("\n===== DEBUG: NULL VALUES BY COLUMN IN MERGE =====")
+    print(debug_merge.isna().sum())
+
+    merged_team = team_summary.merge(
+        team_perf_df,
+        left_on="Team",      # salary data uses abbreviation in Team column
+        right_on="team",   # standings uses abbrev column
+        how="left"
+    )
+    merged_team["goalDifferential"] = merged_team["goalDifferential"].fillna(0)
+else:
+    merged_team = pd.DataFrame()
+
+if not merged_team.empty:
+    conference_values = sorted(merged_team["conferenceName"].dropna().unique())
+    conference_options = (
+        [{"label": "All Conferences", "value": "All"}] +
+        [{"label": conf, "value": conf} for conf in conference_values]
+    )
+else:
+    conference_options = [{"label": "All Conferences", "value": "All"}]
 
 team_tab = dbc.Container([
     html.H2("🏒 Team Salary Efficiency Overview", className="fw-bold text-center my-4", style={"color": "#1f3c5b"}),
-    html.P("Total spending shows each team’s salary investment. The efficiency chart shows overpaid (positive) or underpaid (negative) rosters.",
-           className="text-center text-muted mb-4", style={"fontSize": "1rem"}),
+    html.P(
+        "Total spending shows each team’s salary investment. The efficiency chart shows overpaid (positive) or underpaid (negative) rosters.",
+        className="text-center text-muted mb-4",
+        style={"fontSize": "1rem"}
+    ),
 
     dbc.Row([dbc.Col(dcc.Graph(figure=spend_fig), md=12)]),
     html.Hr(),
     dbc.Row([dbc.Col(dcc.Graph(figure=overpay_fig), md=12)]),
+
+    html.Hr(style={"marginTop": "2rem", "marginBottom": "2rem"}),
+
+    html.H3("📊 Payroll vs On-Ice Results", className="fw-bold text-center mb-3", style={"color": "#1f3c5b"}),
+    html.P(
+        "Bubble chart compares total spend vs points. Bubble size reflects goal differential. "
+        "Use the conference filter to focus East, West, or view all teams.",
+        className="text-center text-muted mb-3",
+        style={"fontSize": "0.95rem"}
+    ),
+
+    dbc.Row([
+        dbc.Col([
+            html.Label("Filter by Conference:", style={"fontWeight": "bold"}),
+            dcc.Dropdown(
+                id="conference-filter",
+                options=conference_options,
+                value="All",
+                clearable=False,
+                style={"marginBottom": "1rem"}
+            )
+        ], md=4)
+    ], justify="center"),
+
+    dbc.Row([
+        dbc.Col(dcc.Graph(id="cap-eff-graph"), md=12)
+    ]),
 ], fluid=True)
+
+# Callback for bubble chart
+@app.callback(
+    Output("cap-eff-graph", "figure"),
+    [Input("conference-filter", "value")]
+)
+def update_cap_efficiency_chart(selected_conf):
+    if merged_team.empty:
+        fig = px.scatter(title="No team + standings data available")
+        fig.update_layout(**CHART_LAYOUT)
+        return fig
+
+    df = merged_team.copy()
+    if selected_conf and selected_conf != "All":
+        df = df[df["conferenceName"] == selected_conf]
+
+    if df.empty:
+        fig = px.scatter(title="No data for selected conference")
+        fig.update_layout(**CHART_LAYOUT)
+        return fig
+
+    df["goalDifferential"] = df["goalDifferential"].fillna(0)
+
+    # Compute efficiency ratio based on your predictive salary modeling
+    df["Efficiency_Ratio"] = (df["Total_Spend_M"] - df["Overpay_M"]) / df["Total_Spend_M"]
+
+    # Bubble size = Points ROI on spending (Points per $1M spent)
+    df["BubbleSize"] = (df["points"] / df["Total_Spend_M"])
+
+    # FIX: replace NaN or zero values with a minimum marker size
+    df["BubbleSize"] = df["BubbleSize"].replace([None, float("nan")], 0).astype(float)
+    df["BubbleSize"] = df["BubbleSize"].apply(lambda x: 1 if x <= 0 else x)
+
+    # Positive vs negative goal differential coloring
+    df["GoalTrend"] = df["goalDifferential"].apply(lambda x: "Positive" if x >= 0 else "Negative")
+
+    fig = px.scatter(
+        df,
+        x="Efficiency_Ratio",
+        y="points",
+        size="BubbleSize",
+        color="GoalTrend",
+        hover_name="team",
+        text="Team",
+        title="📈 Efficiency Ratio vs Points — Bubble Size = Goal Differential",
+        labels={
+            "Efficiency_Ratio": "Team Efficiency Ratio",
+            "points": "Total Points",
+            "GoalTrend": "Goal Differential",
+        },
+        color_discrete_map={"Positive": "#2ca02c", "Negative": "#d62728"}
+    )
+
+    fig.update_traces(textposition="top center")
+    fig.update_layout(**CHART_LAYOUT)
+    return fig
+
+
+
 
 
 # --------------------------------------------------------------
@@ -404,3 +591,6 @@ app.layout = dbc.Container([
 # --------------------------------------------------------------
 if __name__ == "__main__":
     app.run(debug=True)
+
+print(player_preds_df["Team"].unique())
+

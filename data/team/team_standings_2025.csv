@@ -1,0 +1,33 @@
+team,abbrev,city,conferenceName,divisionName,gamesPlayed,wins,losses,otLosses,points,pointPctg,goalFor,goalAgainst,goalDifferential,streakCode,streakCount
+Winnipeg Jets,WPG,Winnipeg,Western,Central,82,56,22,4,116,0.707317,277,191,86,W,1
+Washington Capitals,WSH,Washington,Eastern,Metropolitan,82,51,22,9,111,0.676829,288,232,56,L,1
+Vegas Golden Knights,VGK,Vegas,Western,Pacific,82,50,22,10,110,0.670732,275,219,56,W,1
+Toronto Maple Leafs,TOR,Toronto,Eastern,Atlantic,82,52,26,4,108,0.658537,268,231,37,W,5
+Dallas Stars,DAL,Dallas,Western,Central,82,50,26,6,106,0.646341,277,224,53,L,4
+Los Angeles Kings,LAK,Los Angeles,Western,Pacific,82,48,25,9,105,0.640244,250,206,44,L,1
+Tampa Bay Lightning,TBL,Tampa Bay,Eastern,Atlantic,82,47,27,8,102,0.621951,294,219,75,L,1
+Colorado Avalanche,COL,Colorado,Western,Central,82,49,29,4,102,0.621951,277,234,43,W,1
+Edmonton Oilers,EDM,Edmonton,Western,Pacific,82,48,29,5,101,0.615854,259,236,23,W,1
+Carolina Hurricanes,CAR,Carolina,Eastern,Metropolitan,82,47,30,5,99,0.603659,266,233,33,L,3
+Florida Panthers,FLA,Florida,Eastern,Atlantic,82,47,31,4,98,0.597561,252,223,29,L,2
+Ottawa Senators,OTT,Ottawa,Eastern,Atlantic,82,45,30,7,97,0.591463,243,234,9,W,1
+Minnesota Wild,MIN,Minnesota,Western,Central,82,45,30,7,97,0.591463,228,239,-11,W,2
+St. Louis Blues,STL,St. Louis,Western,Central,82,44,30,8,96,0.585366,254,233,21,W,1
+Calgary Flames,CGY,Calgary,Western,Pacific,82,41,27,14,96,0.585366,225,238,-13,W,4
+New Jersey Devils,NJD,New Jersey,Eastern,Metropolitan,82,42,33,7,91,0.554878,242,222,20,L,1
+Montréal Canadiens,MTL,Montréal,Eastern,Atlantic,82,40,31,11,91,0.554878,245,265,-20,W,1
+Vancouver Canucks,VAN,Vancouver,Western,Pacific,82,38,30,14,90,0.54878,236,253,-17,L,1
+Utah Hockey Club,UTA,Utah,Western,Central,82,38,31,13,89,0.542683,241,251,-10,L,1
+Columbus Blue Jackets,CBJ,Columbus,Eastern,Metropolitan,82,40,33,9,89,0.542683,273,268,5,W,6
+Detroit Red Wings,DET,Detroit,Eastern,Atlantic,82,39,35,8,86,0.52439,238,259,-21,OT,1
+New York Rangers,NYR,NY Rangers,Eastern,Metropolitan,82,39,36,7,85,0.518293,256,255,1,W,2
+New York Islanders,NYI,NY Islanders,Eastern,Metropolitan,82,35,35,12,82,0.5,224,260,-36,L,2
+Pittsburgh Penguins,PIT,Pittsburgh,Eastern,Metropolitan,82,34,36,12,80,0.487805,243,293,-50,W,1
+Anaheim Ducks,ANA,Anaheim,Western,Pacific,82,35,37,10,80,0.487805,221,263,-42,OT,2
+Buffalo Sabres,BUF,Buffalo,Eastern,Atlantic,82,36,39,7,79,0.481707,269,289,-20,W,1
+Seattle Kraken,SEA,Seattle,Western,Pacific,82,35,41,6,76,0.463415,247,265,-18,L,1
+Boston Bruins,BOS,Boston,Eastern,Atlantic,82,33,39,10,76,0.463415,222,272,-50,OT,1
+Philadelphia Flyers,PHI,Philadelphia,Eastern,Metropolitan,82,33,39,10,76,0.463415,238,286,-48,L,2
+Nashville Predators,NSH,Nashville,Western,Central,82,30,44,8,68,0.414634,214,274,-60,W,1
+Chicago Blackhawks,CHI,Chicago,Western,Central,82,25,46,11,61,0.371951,226,296,-70,W,2
+San Jose Sharks,SJS,San Jose,Western,Pacific,82,20,50,12,52,0.317073,210,315,-105,L,1
