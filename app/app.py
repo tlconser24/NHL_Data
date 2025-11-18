@@ -501,66 +501,115 @@ team_tab = dbc.Container([
         ], md=4)
     ], justify="center"),
 
+    dcc.Dropdown(
+    id="playoff-toggle",
+    options=[
+        {"label": "All Teams", "value": "All"},
+        {"label": "Playoff Teams Only", "value": "Playoff"}
+    ],
+    value="All",
+    clearable=False,
+    style={"marginBottom": "1rem", "width": "50%"}
+),
+
+
     dbc.Row([
         dbc.Col(dcc.Graph(id="cap-eff-graph"), md=12)
     ]),
 ], fluid=True)
 
+
+# Callback for team efficiency bubble chart
 # Callback for bubble chart
 @app.callback(
     Output("cap-eff-graph", "figure"),
-    [Input("conference-filter", "value")]
+    [Input("conference-filter", "value"),
+     Input("playoff-toggle", "value")]
 )
-def update_cap_efficiency_chart(selected_conf):
+def update_cap_efficiency_chart(selected_conf, selected_group):
     if merged_team.empty:
         fig = px.scatter(title="No team + standings data available")
         fig.update_layout(**CHART_LAYOUT)
         return fig
 
     df = merged_team.copy()
+
+    # --- PLAYOFF TEAM LIST ---
+    playoff_teams = [
+        "Winnipeg Jets", "Dallas Stars", "Vegas Golden Knights", "Edmonton Oilers",
+        "St. Louis Blues", "Colorado Avalanche", "Minnesota Wild", "Los Angeles Kings",
+        "Florida Panthers", "Toronto Maple Leafs", "Carolina Hurricanes",
+        "Washington Capitals", "Tampa Bay Lightning", "Ottawa Senators",
+        "New Jersey Devils", "Montréal Canadiens"
+    ]
+
+    # Filter to playoff teams if selected
+    if selected_group == "Playoff":
+        df = df[df["team"].isin(playoff_teams)]
+
+    # Conference filter
     if selected_conf and selected_conf != "All":
         df = df[df["conferenceName"] == selected_conf]
 
     if df.empty:
-        fig = px.scatter(title="No data for selected conference")
+        fig = px.scatter(title="No data for selected filters")
         fig.update_layout(**CHART_LAYOUT)
         return fig
 
-    df["goalDifferential"] = df["goalDifferential"].fillna(0)
+    # Bubble size from magnitude of inefficiency
+    df["BubbleSize"] = df["Overpay_M"].abs().replace(0, 0.25)
 
-    # Compute efficiency ratio based on your predictive salary modeling
-    df["Efficiency_Ratio"] = (df["Overpay_M"]) / df["Total_Spend_M"]
-
-    # Bubble size = Points ROI on spending (Points per $1M spent)
-    df["BubbleSize"] = (df["points"] / df["Total_Spend_M"])
-
-    # FIX: replace NaN or zero values with a minimum marker size
-    df["BubbleSize"] = df["BubbleSize"].replace([None, float("nan")], 0).astype(float)
-    df["BubbleSize"] = df["BubbleSize"].apply(lambda x: 1 if x <= 0 else x)
-
-    # Positive vs negative goal differential coloring
-    df["GoalTrend"] = df["goalDifferential"].apply(lambda x: "Positive" if x >= 0 else "Negative")
+    # Color from direction of inefficiency
+    df["SpendOutcome"] = df["Overpay_M"].apply(lambda x: "Underpaying" if x < 0 else "Overpaying")
 
     fig = px.scatter(
         df,
-        x="Efficiency_Ratio",
+        x="Total_Spend_M",
         y="points",
-        size="Total_Spend_M",
-        color="GoalTrend",
+        size="BubbleSize",
+        color="SpendOutcome",
         hover_name="team",
-        text="Team",
-        title="📈 Efficiency Ratio vs Points — Bubble Size = Goal Differential",
+        text="team",
+        title="💵 Total Spend vs Performance — Bubble Size = Spending Inefficiency",
         labels={
-            "Efficiency_Ratio": "Team Efficiency Ratio",
-            "points": "Total Points",
-            "GoalTrend": "Goal Differential",
+            "Total_Spend_M": "Total Payroll (Millions)",
+            "points": "Team Points",
+            "SpendOutcome": "Spending Outcome",
         },
-        color_discrete_map={"Positive": "#2ca02c", "Negative": "#d62728"}
+        color_discrete_map={"Underpaying": "#2ca02c", "Overpaying": "#d62728"}
     )
 
+    # Optional: playoff threshold line
+    fig.add_vline(
+    x=78, line_dash="dot", line_color="gray", line_width=2,
+    annotation_text="Lower Playoff Spend Threshold ($78M)",
+    annotation_position="bottom left"
+)
+
+    fig.add_vline(
+        x=97, line_dash="dot", line_color="gray", line_width=2,
+        annotation_text="Upper Playoff Spend Threshold ($97M)",
+        annotation_position="bottom right"
+    )
+    # --- Playoff Performance Threshold Horizontal Line (segment only between 78–97) ---
+    fig.add_shape(
+        type="line",
+        x0=78, x1=97, y0=92, y1=92,
+        line=dict(color="gray", width=2, dash="dot")
+    )
+
+    fig.add_annotation(
+        x=(78+97)/2, y=92,
+        text="Playoff Performance Threshold (92 Points)",
+        showarrow=False,
+        font=dict(color="gray", size=12)
+    )
     fig.update_traces(textposition="top center")
     fig.update_layout(**CHART_LAYOUT)
     return fig
+
+
+
 
 
 
@@ -591,6 +640,4 @@ app.layout = dbc.Container([
 # --------------------------------------------------------------
 if __name__ == "__main__":
     app.run(debug=True)
-
-print(player_preds_df["Team"].unique())
 
