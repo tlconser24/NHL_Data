@@ -332,7 +332,7 @@ if not player_df.empty and "PPG_Category" not in player_df.columns:
 elif player_df.empty:
     player_df["PPG_Category"] = pd.Series(dtype="object")
 
-player_df["Age"] = player_df["Age"].fillna(0).astype(int)
+#player_df["Age"] = player_df["Age"].fillna(0).astype(int)
 
 player_df = player_df.drop_duplicates(
     subset=["Player_Name", "Team", "Pos", "Age", "AAV_M", "Predicted_AAV_M", "Residual_M"]
