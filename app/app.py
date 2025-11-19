@@ -209,7 +209,7 @@ player_tab = dbc.Container([
 ], fluid=True)
 
 # Age normalization
-player_preds_df["Age"] = player_preds_df["Age"].fillna(0).astype(int)
+#player_preds_df["Age"] = player_preds_df["Age"].fillna(0).astype(int)
 
 # Do NOT overwrite pipeline Unique_ID — only create if missing
 if "Unique_ID" not in player_preds_df.columns:
