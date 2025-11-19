@@ -1,32 +1,54 @@
 /* =========================================================
-   Global Theme – Professional NHL Analytics Dashboard
+   Global Theme – Professional NHL Analytics Dashboard V2
    ========================================================= */
 
+:root {
+    /* Color Palette */
+    --primary-color: #1f3c5b;      /* Deep Navy Blue */
+    --secondary-color: #2E8B57;    /* Sea Green */
+    --accent-color: #DAA520;       /* Goldenrod */
+    --background-color: #f8f9fa;   /* Light Gray-White */
+    --text-color: #333;            /* Dark Gray */
+    
+    /* Typography */
+    --font-main: 'Segoe UI', Roboto, 'Open Sans', Arial, sans-serif;
+}
+
+/* ------------------------------
+   Global Reset and Base Styles
+   ------------------------------ */
 body {
-    background-color: #f8f9fa;
-    font-family: 'Segoe UI', Roboto, 'Open Sans', Arial, sans-serif;
-    color: #333;
+    background-color: var(--background-color);
+    font-family: var(--font-main);
+    color: var(--text-color);
     margin: 0;
     padding: 0;
+    line-height: 1.6;
 }
 
 /* ------------------------------
    Headings and Typography
    ------------------------------ */
 h1, h2, h3, h4 {
-    color: #1f3c5b;
+    color: var(--primary-color);
     font-weight: 700;
     letter-spacing: 0.5px;
     text-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    transition: color 0.3s ease;
 }
 
-h1 {
-    font-size: 2.1rem;
+h1 { 
+    font-size: 2.1rem; 
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 h2 {
     font-size: 1.6rem;
     margin-bottom: 1rem;
+    border-bottom: 2px solid var(--secondary-color);
+    padding-bottom: 0.5rem;
 }
 
 h3, h4 {
@@ -39,105 +61,117 @@ h3, h4 {
 .card {
     background-color: #fff;
     border: none;
-    border-radius: 12px;
-    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
-    padding: 20px;
-    margin-bottom: 20px;
-    transition: all 0.25s ease-in-out;
+    border-radius: 15px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+    margin-bottom: 25px;
+    transition: all 0.3s ease-in-out;
+    position: relative;
+    overflow: hidden;
+}
+
+.card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 5px;
+    background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
 }
 
 .card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.12);
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
 
 /* ------------------------------
-   Graphs
+   Graphs and Visualizations
    ------------------------------ */
 .dash-graph {
     background-color: #ffffff;
-    border-radius: 12px;
-    padding: 15px;
-    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.06);
-    transition: box-shadow 0.3s ease, transform 0.3s ease;
+    border-radius: 15px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    position: relative;
 }
 
 .dash-graph:hover {
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.1);
-    transform: translateY(-1px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    transform: scale(1.01);
 }
 
 /* ------------------------------
-   Tabs
+   Tabs and Navigation
    ------------------------------ */
 .nav-tabs {
-    border-bottom: 2px solid #e5e5e5;
+    border-bottom: 3px solid var(--secondary-color);
 }
 
 .nav-tabs .nav-link {
-    color: #1f3c5b;
-    font-weight: 500;
+    color: var(--primary-color);
+    font-weight: 600;
     border: none;
-    transition: color 0.3s ease, background-color 0.3s ease;
+    transition: all 0.3s ease;
 }
 
 .nav-tabs .nav-link.active {
-    background-color: #1f3c5b;
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
     color: #fff !important;
-    border-radius: 6px 6px 0 0;
-    font-weight: 600;
+    border-radius: 10px 10px 0 0;
 }
 
 .nav-tabs .nav-link:hover {
-    background-color: #e9ecef;
-    color: #1f3c5b;
+    background-color: rgba(46, 139, 87, 0.1);
 }
 
 /* ------------------------------
-   Data Table Enhancements
+   Data Tables
    ------------------------------ */
 .dash-table-container {
-    border-radius: 8px;
+    border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    background: white;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.06);
 }
 
 .dash-table-container .dash-header {
-    background-color: #f0f2f5;
-    font-weight: 600;
-}
-
-.dash-table-container .dash-cell {
-    padding: 10px;
+    background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
+    color: white;
+    font-weight: 700;
 }
 
 /* ------------------------------
    Buttons and Inputs
    ------------------------------ */
 button, .btn, .Select-control {
-    border-radius: 8px !important;
+    border-radius: 10px;
+    transition: all 0.3s ease;
 }
 
 .Select-control {
-    box-shadow: none !important;
-    border: 1px solid #ccc !important;
+    border-color: var(--primary-color);
 }
 
-.Select-control:hover {
-    border-color: #1f3c5b !important;
+/* ------------------------------
+   Responsive Design
+   ------------------------------ */
+@media (max-width: 768px) {
+    h1 { font-size: 1.8rem; }
+    h2 { font-size: 1.4rem; }
+    .card, .dash-graph { padding: 15px; }
 }
 
 /* ------------------------------
    Animations
    ------------------------------ */
 @keyframes fadeIn {
-    0% { opacity: 0; transform: translateY(10px); }
-    100% { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
 .container, .card, .dash-graph {
-    animation: fadeIn 0.5s ease-in-out;
+    animation: fadeIn 0.7s ease-out;
 }
 
 /* ------------------------------
@@ -145,9 +179,9 @@ button, .btn, .Select-control {
    ------------------------------ */
 footer {
     text-align: center;
-    color: #6c757d;
+    color: var(--primary-color);
     font-size: 0.9rem;
     padding: 20px 0;
     margin-top: 40px;
-    border-top: 1px solid #dee2e6;
+    border-top: 2px solid var(--secondary-color);
 }

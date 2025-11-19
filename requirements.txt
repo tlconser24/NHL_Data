@@ -11,3 +11,4 @@ nbconvert
 jupyter
 gunicorn
 joblib
+nhl-api-py

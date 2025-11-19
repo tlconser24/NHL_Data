@@ -208,12 +208,52 @@ player_tab = dbc.Container([
     dcc.Graph(id="predictions-scatter"),
 ], fluid=True)
 
+# Age normalization
+player_preds_df["Age"] = player_preds_df["Age"].fillna(0).astype(int)
+
+# Do NOT overwrite pipeline Unique_ID — only create if missing
+if "Unique_ID" not in player_preds_df.columns:
+    player_preds_df["Unique_ID"] = (
+        player_preds_df["Player_Name"].str.replace(" ", "")
+        + "_" + player_preds_df["Team"].str.replace(" ", "")
+        + "_" + player_preds_df["Pos"]
+        + "_" + player_preds_df["Age"].astype(str)
+    )
+
+
+
 @app.callback(
     [Output("predictions-scatter", "figure"),
      Output("r2-display", "children")],
     [Input("position-filter", "value")]
 )
+
+
 def update_scatter(selected_pos):
+    #print("\n===== DEBUG: player_preds_df SHAPE & COLUMNS =====")
+    #print(player_preds_df.shape)
+    #print(player_preds_df.columns.tolist())
+
+    # Show only Elias Pettersson rows
+    ep_debug = player_preds_df[player_preds_df["Player_Name"] == "Elias Pettersson"]
+    #print("\n===== DEBUG: All Elias Pettersson rows BEFORE FILTER =====")
+    #print(ep_debug.to_string(index=False))
+
+    if selected_pos:
+        filtered_df = player_preds_df[player_preds_df["Pos"] == selected_pos]
+        ep_filter = filtered_df[filtered_df["Player_Name"] == "Elias Pettersson"]
+        #print(f"\n===== DEBUG: Elias Pettersson rows AFTER FILTER ({selected_pos}) =====")
+        #print(ep_filter.to_string(index=False))
+    else:
+        filtered_df = player_preds_df.copy()
+
+    # Show numeric comparison details
+    #print("\n===== DEBUG: Key Salary / Prediction / Residual Fields =====")
+    #print(player_preds_df.loc[player_preds_df["Player_Name"] == "Elias Pettersson",
+                              #["Player_Name","Pos","Age","Team",
+                               #"AAV_M","Predicted_AAV_M","Residual_M","Unique_ID"]
+                            #].to_string(index=False))
+
     if player_preds_df.empty:
         fig = px.scatter(title="No data available")
         fig.update_layout(**CHART_LAYOUT)
@@ -227,14 +267,24 @@ def update_scatter(selected_pos):
     else:
         r2_value = 0
     fig = px.scatter(
-        filtered_df,
-        x="AAV_M",
-        y="Predicted_AAV_M",
-        color="Pos",
-        hover_data=["Player_Name", "Team"],
-        title="Actual vs Predicted Player Salaries (Millions)",
-        labels={"AAV_M": "Actual AAV (M)", "Predicted_AAV_M": "Predicted AAV (M)"}
-    )
+    filtered_df,
+    x="AAV_M",
+    y="Predicted_AAV_M",
+    color="Pos",
+    hover_name="Unique_ID",
+    hover_data={
+        "Player_Name": True,
+        "Team": True,
+        "Pos": True,
+        "Age": True,
+        "AAV_M": ":.2f",
+        "Predicted_AAV_M": ":.2f",
+        "Residual_M": ":.2f"
+    },
+    title="Actual vs Predicted Player Salaries (Millions)",
+    labels={"AAV_M": "Actual AAV (M)", "Predicted_AAV_M": "Predicted AAV (M)"}
+)
+
     fig.update_layout(**CHART_LAYOUT)
     fig.add_shape(
         type="line",
@@ -246,6 +296,7 @@ def update_scatter(selected_pos):
     )
     r2_text = f"Predictive R² for {'All Positions' if not selected_pos else selected_pos}: **{r2_value:.3f}**"
     return fig, r2_text
+
 
 
 # --------------------------------------------------------------
@@ -281,11 +332,13 @@ if not player_df.empty and "PPG_Category" not in player_df.columns:
 elif player_df.empty:
     player_df["PPG_Category"] = pd.Series(dtype="object")
 
-player_df = (
-    player_df.sort_values("Residual_M", ascending=False)
-    .groupby(["Player_Name", "Pos"], as_index=False)
-    .first()
+player_df["Age"] = player_df["Age"].fillna(0).astype(int)
+
+player_df = player_df.drop_duplicates(
+    subset=["Player_Name", "Team", "Pos", "Age", "AAV_M", "Predicted_AAV_M", "Residual_M"]
 )
+
+
 player_df["Residual_M_Clipped"] = player_df["Residual_M"].clip(-5, 5)
 
 category_colors = {"Elite": "#2ca02c", "Very Good": "#1f77b4", "Solid Role": "#ff7f0e", "Depth Role": "#d62728"}
@@ -332,7 +385,7 @@ def update_underpaid_chart(selected_pos):
         x="Residual_M_Clipped",
         y="Player_Name",
         color="PPG_Category",
-        text=pos_df["AAV_M"].round(2).astype(str) + "M",
+        text=pos_df["Residual_M_Clipped"].round(2).astype(str) + "M",
         orientation="h",
         color_discrete_map=category_colors,
         title=f"Top 25 Underpaid {selected_pos}s",
@@ -422,16 +475,16 @@ except FileNotFoundError:
     team_perf_df = pd.DataFrame()
 
 if not team_summary.empty and not team_perf_df.empty:
-    print("\n===== DEBUG: UNIQUE TEAM VALUES FROM PLAYER DATA =====")
-    print(team_summary["Team"].unique())
-    print("Count:", len(team_summary["Team"].unique()))
+    #print("\n===== DEBUG: UNIQUE TEAM VALUES FROM PLAYER DATA =====")
+    #print(team_summary["Team"].unique())
+    #print("Count:", len(team_summary["Team"].unique()))
 
-    print("\n===== DEBUG: UNIQUE TEAM ABBREVIATIONS FROM STANDINGS =====")
-    print(team_perf_df["abbrev"].unique())
-    print("Count:", len(team_perf_df["abbrev"].unique()))
+    #print("\n===== DEBUG: UNIQUE TEAM ABBREVIATIONS FROM STANDINGS =====")
+    #print(team_perf_df["abbrev"].unique())
+    #print("Count:", len(team_perf_df["abbrev"].unique()))
 
-    print("\n===== DEBUG: FULL STANDINGS TEAM NAMES =====")
-    print(team_perf_df["team"].unique())
+    #print("\n===== DEBUG: FULL STANDINGS TEAM NAMES =====")
+    #print(team_perf_df["team"].unique())
 
     # Try merge and inspect
     debug_merge = team_summary.merge(
@@ -441,11 +494,11 @@ if not team_summary.empty and not team_perf_df.empty:
         how="left"
     )
 
-    print("\n===== DEBUG: MERGED SAMPLE (HEAD) =====")
-    print(debug_merge.head())
+    #print("\n===== DEBUG: MERGED SAMPLE (HEAD) =====")
+    #print(debug_merge.head())
 
-    print("\n===== DEBUG: NULL VALUES BY COLUMN IN MERGE =====")
-    print(debug_merge.isna().sum())
+    #print("\n===== DEBUG: NULL VALUES BY COLUMN IN MERGE =====")
+    #print(debug_merge.isna().sum())
 
     merged_team = team_summary.merge(
         team_perf_df,
@@ -568,50 +621,306 @@ def update_cap_efficiency_chart(selected_conf, selected_group):
         y="points",
         size="BubbleSize",
         color="SpendOutcome",
-        hover_name="team",
-        text="team",
-        title="💵 Total Spend vs Performance — Bubble Size = Spending Inefficiency",
-        labels={
-            "Total_Spend_M": "Total Payroll (Millions)",
-            "points": "Team Points",
-            "SpendOutcome": "Spending Outcome",
-        },
-        color_discrete_map={"Underpaying": "#2ca02c", "Overpaying": "#d62728"}
+        hover_name="team",  # Full team name on hover
+        text=None,  # Remove direct text labels
+        color_discrete_map={"Underpaying": "#2ca02c", "Overpaying": "#d62728"},
+        hover_data={
+            "Total_Spend_M": ":.1f",  # Total payroll to 1 decimal
+            "points": ":.0f",          # Team points as whole number
+            "Overpay_M": ":.2f",       # Overpay amount
+            "SpendOutcome": True,      # Show spending outcome
+            "goalDifferential": ":.0f" # Goal differential 
+        }
     )
 
-    # Optional: playoff threshold line
+    # Keep existing threshold lines and annotations
     fig.add_vline(
-    x=78, line_dash="dot", line_color="gray", line_width=2,
-    annotation_text="Lower Playoff Spend Threshold ($78M)",
-    annotation_position="bottom left"
-)
+        x=78, line_dash="dot", line_color="gray", line_width=2,
+        annotation_text="Lower Playoff Spend Threshold ($78M)",
+        annotation_position="bottom left"
+    )
 
     fig.add_vline(
         x=97, line_dash="dot", line_color="gray", line_width=2,
         annotation_text="Upper Playoff Spend Threshold ($97M)",
         annotation_position="bottom right"
     )
-    # --- Playoff Performance Threshold Horizontal Line (segment only between 78–97) ---
+
     fig.add_shape(
         type="line",
-        x0=78, x1=97, y0=92, y1=92,
+        x0=78, x1=97, y0=91, y1=91,
         line=dict(color="gray", width=2, dash="dot")
     )
 
     fig.add_annotation(
-        x=(78+97)/2, y=92,
+        x=(78+97)/2, y=91,
         text="Playoff Performance Threshold (92 Points)",
         showarrow=False,
         font=dict(color="gray", size=12)
     )
-    fig.update_traces(textposition="top center")
+
     fig.update_layout(**CHART_LAYOUT)
     return fig
 
+# --------------------------------------------------------------
+# 10. Sumary Tab
+# --------------------------------------------------------------
+
+def prepare_summary_data(player_df, merged_team, selected_team=None):
+    """
+    Returns top 5 overpaid and top 5 underpaid players.
+    If selected_team is provided, results are filtered to that team.
+    """
+
+    # Filter to selected team if provided
+    if selected_team:
+        df = player_df[player_df["Team"] == selected_team].copy()
+    else:
+        df = player_df.copy()
+
+    # Top 5 Overpaid
+    top_overpaid = (
+        df[df["Residual_M"] > 0]
+        .nlargest(5, "Residual_M")[["Player_Name", "Team","Pos", "AAV_M", "Predicted_AAV_M", "Residual_M"]]
+    )
+
+    # Top 5 Underpaid
+    top_underpaid = (
+        df[df["Residual_M"] < 0]
+        .nsmallest(5, "Residual_M")[["Player_Name", "Team", "Pos","AAV_M", "Predicted_AAV_M", "Residual_M"]]
+    )
+
+    # Playoff team salary stats remain unchanged
+    playoff_teams = [
+        "Winnipeg Jets", "Dallas Stars", "Vegas Golden Knights", "Edmonton Oilers",
+        "St. Louis Blues", "Colorado Avalanche", "Minnesota Wild", "Los Angeles Kings",
+        "Florida Panthers", "Toronto Maple Leafs", "Carolina Hurricanes",
+        "Washington Capitals", "Tampa Bay Lightning", "Ottawa Senators",
+        "New Jersey Devils", "Montréal Canadiens"
+    ]
+
+    playoff_team_salaries = merged_team[merged_team['team'].isin(playoff_teams)]['Total_Spend_M']
+    
+    team_salary_stats = {
+        'Min Playoff Salary': playoff_team_salaries.min(),
+        'Max Playoff Salary': playoff_team_salaries.max(),
+        'Avg Playoff Salary': playoff_team_salaries.mean(),
+        'Playoff Teams Count': len(playoff_teams)
+    }
+
+    return top_overpaid, top_underpaid, team_salary_stats
+
+# Prepare the summary data
+top_overpaid, top_underpaid, team_salary_stats = prepare_summary_data(player_df, merged_team)
+
+# ------- DISPLAY FORMATTING FOR SUMMARY TABLES -------
+
+display_overpaid = top_overpaid.rename(columns={
+    "Player_Name": "Player",
+    "Team": "Team",
+    "Pos": "Position",
+    "AAV_M": "Yearly Salary (M)",
+    "Predicted_AAV_M": "Predicted Salary (M)",
+    "Residual_M": "Difference (M)"
+})
+
+display_underpaid = top_underpaid.rename(columns={
+    "Player_Name": "Player",
+    "Team": "Team",
+    "Pos": "Position",
+    "AAV_M": "Yearly Salary (M)",
+    "Predicted_AAV_M": "Predicted Salary (M)",
+    "Residual_M": "Difference (M)"
+})
+
+# Round financial values to 2 decimals for display
+for col in ["Yearly Salary (M)", "Predicted Salary (M)", "Difference (M)"]:
+    display_overpaid[col] = display_overpaid[col].round(2)
+    display_underpaid[col] = display_underpaid[col].round(2)
 
 
+# Create Summary Tab
+summary_tab = dbc.Container([
+    html.H1("NHL Salary Analytics - Executive Summary", 
+            className="fw-bold text-center my-4", 
+            style={"color": "#1f3c5b"}),
 
 
+    # Model Performance Section
+    dbc.Row([
+        dbc.Col([
+            html.H3("Modeling Insights", className="text-center"),
+            dbc.Card(
+                dbc.CardBody([
+                    html.P(f"Overall Model R²: {overall_r2:.3f}", className="card-text"),
+                    html.P(f"Veteran Model R²: {veteran_r2:.3f}", className="card-text"),
+                    html.P(f"Rookie Model R²: {rookie_r2:.3f}", className="card-text"),
+                    html.P("Model explains 87% of salary variance across NHL players", 
+                           className="card-text text-muted")
+                ]),
+                className="mb-4"
+            )
+        ], width=6),
+        
+        # Player Prediction Section
+        dbc.Col([
+            html.H3("Player Prediction Overview", className="text-center"),
+            dbc.Card(
+                dbc.CardBody([
+                    html.P("Predicts player salaries based on:", className="card-text"),
+                    html.Ul([
+                        html.Li("Performance metrics"),
+                        html.Li("Player position"),
+                        html.Li("Game experience")
+                    ]),
+                    html.P("Identifies potential over/underpaid players", 
+                           className="card-text text-muted")
+                ]),
+                className="mb-4"
+            )
+        ], width=6)
+    ]),
+
+    # Team Salary Analysis
+    dbc.Row([
+        dbc.Col([
+            html.H3("Playoff Team Salary Insights", className="text-center"),
+            dbc.Card(
+                dbc.CardBody([
+                    html.P(f"Minimum Playoff Team Salary: ${team_salary_stats['Min Playoff Salary']:.2f}M", className="card-text"),
+                    html.P(f"Maximum Playoff Team Salary: ${team_salary_stats['Max Playoff Salary']:.2f}M", className="card-text"),
+                    html.P(f"Average Playoff Team Salary: ${team_salary_stats['Avg Playoff Salary']:.2f}M", className="card-text"),
+                    html.P(f"Playoff Teams: {team_salary_stats['Playoff Teams Count']}", className="card-text"),
+                ]),
+                className="mb-4"
+            )
+        ], width=12)
+    ]),
+
+    # Top Overpaid/Underpaid Players
+    html.Div([
+        html.Label("Select Team:", style={"fontWeight": "bold", "fontSize": "1rem"}),
+        dcc.Dropdown(
+            id="summary-team-filter",
+            options=[{"label": team, "value": team} for team in sorted(player_df["Team"].unique())],
+            value=None,
+            placeholder="Select a Team",
+            clearable=True,
+            style={"marginBottom": "1.5rem", "width": "60%"}
+        )
+    ], style={"textAlign": "center"}),
+
+    dbc.Row([
+        dbc.Col([
+            html.H3("Top Overpaid Players", className="text-center"),
+            dash_table.DataTable(
+    id="display_overpaid",
+    data=display_overpaid.to_dict('records'),
+    columns=[{"name": i, "id": i, "presentation": "markdown"} for i in display_overpaid.columns],
+    style_table={
+        'overflowX': 'auto',
+        'minWidth': '100%',
+        'border': 'none'
+    },
+    style_header={
+        'backgroundColor': '#1f3c5b',
+        'fontWeight': 'bold',
+        'color': 'white',
+        'whiteSpace': 'normal',
+        'height': 'auto',
+        'textAlign': 'center',
+        'padding': '8px',
+        'border': 'none'
+    },
+    style_cell={
+        'textAlign': 'left',
+        'padding': '6px 10px',
+        'fontSize': '14px',
+        'whiteSpace': 'normal',
+        'height': 'auto',
+        'border': 'none'
+    },
+    style_data={
+        'border': 'none'
+    },
+    style_data_conditional=[
+        {'if': {'row_index': 'odd'}, 'backgroundColor': '#f7f9fc'},
+    ],
+)
+
+
+        ], width=6),
+        dbc.Col([
+            html.H3("Top Underpaid Players", className="text-center"),
+            dash_table.DataTable(
+    id="display_underpaid",
+    data=display_underpaid.to_dict('records'),
+    columns=[{"name": i, "id": i, "presentation": "markdown"} for i in display_underpaid.columns],
+    style_table={
+        'overflowX': 'auto',
+        'minWidth': '100%',
+        'border': 'none'
+    },
+    style_header={
+        'backgroundColor': '#1f3c5b',
+        'fontWeight': 'bold',
+        'color': 'white',
+        'whiteSpace': 'normal',
+        'height': 'auto',
+        'textAlign': 'center',
+        'padding': '8px',
+        'border': 'none'
+    },
+    style_cell={
+        'textAlign': 'left',
+        'padding': '6px 10px',
+        'fontSize': '14px',
+        'whiteSpace': 'normal',
+        'height': 'auto',
+        'border': 'none'
+    },
+    style_data={
+        'border': 'none'
+    },
+    style_data_conditional=[
+        {'if': {'row_index': 'odd'}, 'backgroundColor': '#f7f9fc'},
+    ],
+)
+
+        ], width=6)
+    ]),
+
+], fluid=True)
+
+
+@app.callback(
+    [Output("display_overpaid", "data"),
+     Output("display_underpaid", "data")],
+    [Input("summary-team-filter", "value")]
+)
+def update_summary_tables(selected_team):
+    top_overpaid, top_underpaid, _ = prepare_summary_data(player_df, merged_team, selected_team)
+
+    top_overpaid = top_overpaid.rename(columns={
+    "Player_Name": "Player",
+    "Team": "Team",
+    "Pos": "Position",
+    "AAV_M": "Yearly Salary (M)",
+    "Predicted_AAV_M": "Predicted Salary (M)",
+    "Residual_M": "Difference (M)"
+    }).round(2)
+
+    top_underpaid = top_underpaid.rename(columns={
+    "Player_Name": "Player",
+    "Team": "Team",
+    "Pos": "Position",
+    "AAV_M": "Yearly Salary (M)",
+    "Predicted_AAV_M": "Predicted Salary (M)",
+    "Residual_M": "Difference (M)"
+    }).round(2)
+
+
+    return top_overpaid.to_dict("records"), top_underpaid.to_dict("records")
 
 
 
@@ -620,6 +929,7 @@ def update_cap_efficiency_chart(selected_conf, selected_group):
 # --------------------------------------------------------------
 app.layout = dbc.Container([
     dbc.Tabs([
+        dbc.Tab(label="Summary", children=[summary_tab], activeTabClassName="fw-bold"),
         dbc.Tab(label="Model Overview", children=[overview_tab], activeTabClassName="fw-bold"),
         dbc.Tab(label="Player Predictions", children=[player_tab], activeTabClassName="fw-bold"),
         dbc.Tab(label="Underpaid Players", children=[tab3], activeTabClassName="fw-bold"),
