@@ -282,7 +282,7 @@ def update_scatter(selected_pos):
         "Residual_M": ":.2f"
     },
     title="Actual vs Predicted Player Salaries (Millions)",
-    labels={"AAV_M": "Actual AAV (M)", "Predicted_AAV_M": "Predicted AAV (M)"}
+    labels={"AAV_M": "Actual Salary (M)", "Predicted_AAV_M": "Predicted Salary (M)"}
 )
 
     fig.update_layout(**CHART_LAYOUT)
@@ -444,7 +444,8 @@ if not team_df.empty:
         spend_data,
         x="Team",
         y="Total_Spend_M",
-        title="💰 Total Team Spending (AAV Sum, Millions)",
+        title="💰 Total Team Spending (Sallary Sum, Millions)",
+        labels={"Total_Spend_M": "Team Salary (Millions)"},
         color="Total_Spend_M",
         color_continuous_scale="Blues",
         text=spend_data["Total_Spend_M"].round(1).astype(str) + "M"
@@ -455,6 +456,7 @@ if not team_df.empty:
         y="Overpay_M",
         title="⚖️ Team Contract Efficiency (Negative = Underpaid Roster)",
         color="Overpay_M",
+        labels={"Overpay_M": "Overpay / Underpay (Millions)"},
         color_continuous_scale="RdYlGn_r",
         text=team_summary["Overpay_M"].round(2).astype(str) + "M"
     )
@@ -620,6 +622,7 @@ def update_cap_efficiency_chart(selected_conf, selected_group):
         x="Total_Spend_M",
         y="points",
         size="BubbleSize",
+        labels={"Total_Spend_M": "Total Salary (Millions)"},
         color="SpendOutcome",
         hover_name="team",  # Full team name on hover
         text=None,  # Remove direct text labels
@@ -654,7 +657,7 @@ def update_cap_efficiency_chart(selected_conf, selected_group):
 
     fig.add_annotation(
         x=(78+97)/2, y=91,
-        text="Playoff Performance Threshold (92 Points)",
+        text="Playoff Performance Threshold (91 Points)",
         showarrow=False,
         font=dict(color="gray", size=12)
     )
