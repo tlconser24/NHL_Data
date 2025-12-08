@@ -213,6 +213,9 @@ player_tab = dbc.Container([
 
 # Do NOT overwrite pipeline Unique_ID — only create if missing
 if "Unique_ID" not in player_preds_df.columns:
+    # Add a fallback for missing Age
+    player_preds_df['Age'] = player_preds_df.get('Age', '')  # Use empty string if Age is missing
+    
     player_preds_df["Unique_ID"] = (
         player_preds_df["Player_Name"].str.replace(" ", "")
         + "_" + player_preds_df["Team"].str.replace(" ", "")
@@ -1039,7 +1042,7 @@ summary_tab = dbc.Container([
                     html.P(f"Overall Model R²: {overall_r2:.3f}", className="card-text"),
                     html.P(f"Veteran Model R²: {veteran_r2:.3f}", className="card-text"),
                     html.P(f"Rookie Model R²: {rookie_r2:.3f}", className="card-text"),
-                    html.P("Model explains 87% of salary variance across NHL players", 
+                    html.P("Model explains 66% of salary variance across NHL players", 
                            className="card-text text-muted")
                 ]),
                 className="mb-4"
