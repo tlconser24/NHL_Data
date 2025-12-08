@@ -68,34 +68,21 @@ CHART_LAYOUT = dict(
 # --------------------------------------------------------------
 # 3. Load Data
 # --------------------------------------------------------------
-def load_team_standings():
-    try:
-        # Use the exact file name you showed
-        team_standings_path = os.path.join(DATA_PATH, "team_standings_2025.csv")
-        
-        # Read the CSV file
-        team_df = pd.read_csv(team_standings_path)
-        
-        # Print columns for debugging
-        print("Team Standings Columns:", team_df.columns.tolist())
-        
-        # Use 'points' as a proxy for team spending
-        team_df['Total_Spend_M'] = team_df['points']
-        
-        return team_df
-    except FileNotFoundError:
-        print(f"Team standings file not found at {team_standings_path}")
-        return pd.DataFrame()
-    except Exception as e:
-        print(f"Error loading team standings: {e}")
-        return pd.DataFrame()
-
 def load_data():
     try:
+        # Load CSV files
         summary_df = pd.read_csv(os.path.join(DATA_PATH, "model_summary.csv"))
         pos_results_df = pd.read_csv(os.path.join(DATA_PATH, "position_r2.csv"))
         player_preds_df = pd.read_csv(os.path.join(DATA_PATH, "player_predictions.csv"))
-        merged_team = load_team_standings()
+        
+        # Load team standings
+        try:
+            merged_team = pd.read_csv(os.path.join(DATA_PATH, "team_standings_2025.csv"))
+            # Use 'points' as a proxy for team spending
+            merged_team['Total_Spend_M'] = merged_team['points']
+        except FileNotFoundError:
+            print("Team standings file not found")
+            merged_team = pd.DataFrame()
 
         # Ensure necessary columns exist
         required_columns = ['Player_Name', 'Team', 'Pos', 'AAV_M', 'Predicted_AAV_M']
@@ -104,11 +91,21 @@ def load_data():
                 print(f"Warning: Missing column {col}")
                 player_preds_df[col] = None  # Add placeholder column
 
+        # Add Residual_M column if missing
+        if 'Residual_M' not in player_preds_df.columns:
+            player_preds_df['Residual_M'] = player_preds_df['AAV_M'] - player_preds_df['Predicted_AAV_M']
+
+        # Ensure numeric columns
+        numeric_columns = ['AAV_M', 'Predicted_AAV_M', 'Residual_M']
+        for col in numeric_columns:
+            player_preds_df[col] = pd.to_numeric(player_preds_df[col], errors='coerce')
+
     except FileNotFoundError as e:
         print(f"Data file not found: {e}")
+        # Create empty DataFrames with expected columns
         summary_df = pd.DataFrame(columns=["Model", "R2", "RMSE"])
         pos_results_df = pd.DataFrame(columns=["Pos_encoded", "R2", "RMSE"])
-        player_preds_df = pd.DataFrame(columns=['Player_Name', 'Team', 'Pos', 'AAV_M', 'Predicted_AAV_M'])
+        player_preds_df = pd.DataFrame(columns=['Player_Name', 'Team', 'Pos', 'AAV_M', 'Predicted_AAV_M', 'Residual_M'])
         merged_team = pd.DataFrame()
 
     return summary_df, pos_results_df, player_preds_df, merged_team
