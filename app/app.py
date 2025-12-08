@@ -68,6 +68,28 @@ CHART_LAYOUT = dict(
 # --------------------------------------------------------------
 # 3. Load Data
 # --------------------------------------------------------------
+def load_team_standings():
+    try:
+        # Use the exact file name you showed
+        team_standings_path = os.path.join(DATA_PATH, "team_standings_2025.csv")
+        
+        # Read the CSV file
+        team_df = pd.read_csv(team_standings_path)
+        
+        # Print columns for debugging
+        print("Team Standings Columns:", team_df.columns.tolist())
+        
+        # Use 'points' as a proxy for team spending
+        team_df['Total_Spend_M'] = team_df['points']
+        
+        return team_df
+    except FileNotFoundError:
+        print(f"Team standings file not found at {team_standings_path}")
+        return pd.DataFrame()
+    except Exception as e:
+        print(f"Error loading team standings: {e}")
+        return pd.DataFrame()
+
 def load_data():
     try:
         summary_df = pd.read_csv(os.path.join(DATA_PATH, "model_summary.csv"))
