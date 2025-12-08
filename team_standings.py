@@ -1,4 +1,11 @@
-standings = client.standings.league_standings(season="20242025")
+import pandas as pd
+from nhl_api_py import standings
+
+# -----------------------------
+# 1. Fetch NHL standings data
+# -----------------------------
+data = standings.league_standings(season="20242025")
+
 
 df = pd.DataFrame(data['standings'])
 

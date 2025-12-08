@@ -4,7 +4,7 @@
 # In[1]:
 
 
-get_ipython().system('pip install requirements.txt')
+#%pip install -r requirements.txt
 
 
 # In[2]:
@@ -17,6 +17,7 @@ get_ipython().system('pip install requirements.txt')
 # ------------------------------
 # 0. Imports and Setup
 # ------------------------------
+#%pip install seaborn --upgrade
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -39,45 +40,10 @@ warnings.filterwarnings("ignore")
 # ------------------------------
 NHL_data = pd.read_csv(r"C:\Users\tlcon\OneDrive\Desktop\Machine Learning\Applied Machine Learning Project\NHL 2024-25 Player Stats_Contracts - Stats.csv")
 
-# Fix duplicate player identity issues
-# Combine Player Name + Team + Position to ensure unique player identity
-# Fix duplicate player identity issues
-# Unique_ID must include age and position to avoid collisions
-NHL_data["Unique_ID"] = (
-    NHL_data["Player.ascii"].astype(str) + "_" +
-    NHL_data["Team"].astype(str) + "_" +
-    NHL_data["Pos"].astype(str) + "_" +
-    NHL_data["Age"].astype(str)
-)
-
-# Display-friendly format
-NHL_data["Player_Display"] = (
-    NHL_data["Player.ascii"].astype(str) + " (" +
-    NHL_data["Pos"].astype(str) + ", " +
-    NHL_data["Team"].astype(str) + ", Age " +
-    NHL_data["Age"].astype(str) + ")"
-)
-
-# Clean column naming
-NHL_data = NHL_data.drop(columns=['Player.name'], errors='ignore')
+# Clean
+NHL_data = NHL_data.drop(columns=['Player.name'], axis=1)
 NHL_data.rename(columns={'Player.ascii': 'Player_Name'}, inplace=True)
-
-# Safely convert AAV column
-NHL_data['AAV'] = (
-    NHL_data['AAV']
-    .str.replace('$', '')     # Remove dollar sign
-    .str.replace(',', '')     # Remove commas
-    .str.strip()              # Remove whitespace
-)
-
-# Convert to numeric, handling errors
-NHL_data['AAV'] = pd.to_numeric(NHL_data['AAV'], errors='coerce')
-
-# Remove rows with NaN values in AAV
-NHL_data = NHL_data.dropna(subset=['AAV'])
-
-# Convert to integer
-NHL_data['AAV'] = NHL_data['AAV'].astype(int)
+NHL_data['AAV'] = NHL_data['AAV'].str.replace('$', '').str.replace(',', '').astype(int)
 
 # Drop goalies and small samples
 NHL_data = NHL_data[NHL_data['Pos'] != 'G']
@@ -130,7 +96,7 @@ NHL_data["AAV_M"] = NHL_data["AAV"] / 1_000_000  # e.g., 1.5 → $1.5M
 # ------------------------------
 model_df = NHL_data.select_dtypes(include=[np.number])
 model_df = model_df.drop(
-    columns=['EV', 'G', 'A', 'PP', 'SH', 'GP', 'PTS', 'SOG', 'TAKE', 'GIVE'],
+    columns=['EV', 'G', 'A', 'PP', 'SH', 'GP', 'PTS', 'SOG', 'TAKE', 'GIVE','Length'],
     errors='ignore'
 )
 model_df = model_df.fillna(0)
@@ -223,12 +189,63 @@ test_rmse = np.sqrt(mean_squared_error(y_test, final_preds))
 print(f"FINAL MODEL: {model_name}")
 print(f"Test R² = {test_r2:.2f}")
 print(f"Test RMSE = {test_rmse:,.2f}\n")
-
+print("Final Model Coefficients:"   )
 # Preserve main test data for visualizations
 X_test_main, y_test_main, final_preds_main = X_test.copy(), y_test.copy(), final_preds.copy()
 
 
+
 # In[8]:
+
+
+# ------------------------------
+# Coefficient extraction helper
+# ------------------------------
+def extract_coefficients(final_model, X_reference):
+    """
+    final_model: best pipeline (ridge_best or lasso_best)
+    X_reference: DataFrame used to get original feature names (e.g., X_train)
+    """
+    steps = final_model.named_steps
+
+    # Case 1: Ridge (StandardScaler -> Ridge)
+    if "ridge" in steps:
+        coef = steps["ridge"].coef_
+        feature_names = X_reference.columns
+
+    # Case 2: Lasso (StandardScaler -> PolynomialFeatures -> Lasso)
+    elif "lasso" in steps:
+        poly = steps["polynomialfeatures"]
+        feature_names = poly.get_feature_names_out(X_reference.columns)
+        coef = steps["lasso"].coef_
+
+    else:
+        raise ValueError("Unknown model type, expected ridge or lasso in pipeline.")
+
+    coef_df = pd.DataFrame({
+        "Feature": feature_names,
+        "Coefficient": coef
+    })
+    coef_df["Abs_Coefficient"] = coef_df["Coefficient"].abs()
+    coef_df = coef_df.sort_values("Abs_Coefficient", ascending=False)
+
+    return coef_df
+
+
+# ------------------------------
+# Get and inspect coefficients
+# ------------------------------
+coef_df = extract_coefficients(final_model, X_train)
+
+print("Top 25 most influential features by |coefficient|:")
+print(coef_df.head(25).to_string(index=False))
+
+# Optional: save to CSV for dashboard / reporting
+coef_df.to_csv("model_coefficients.csv", index=False)
+print("\n✅ Coefficients saved to model_coefficients.csv")
+
+
+# In[9]:
 
 
 # ------------------------------
@@ -245,8 +262,8 @@ for label, subset in [('Rookie', rookie_df), ('Veteran', vet_df)]:
     X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.3, random_state=42)
     X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
     model = make_pipeline(StandardScaler(), LassoCV(cv=5, max_iter=10000))
-    model.fit(X_train, y_train)
-    preds = model.predict(X_test)
+    final_model.fit(X_train, y_train)
+    preds = final_model.predict(X_test)
     r2 = r2_score(y_test, preds)
     rmse = np.sqrt(mean_squared_error(y_test, preds))
     print(f"{label} Model R²: {r2:.4f}, RMSE: {rmse:,.0f}")
@@ -254,7 +271,7 @@ for label, subset in [('Rookie', rookie_df), ('Veteran', vet_df)]:
     else: vet_results = {'R2': r2, 'RMSE': rmse}
 
 
-# In[9]:
+# In[10]:
 
 
 # ------------------------------
@@ -272,8 +289,8 @@ for pos in positions:
     X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=0.3, random_state=42)
     X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=0.5, random_state=42)
     model = make_pipeline(StandardScaler(), LassoCV(cv=5, max_iter=10000))
-    model.fit(X_train, y_train)
-    preds = model.predict(X_test)
+    final_model.fit(X_train, y_train)
+    preds = final_model.predict(X_test)
     pos_results.append({
         'Pos_encoded': pos,
         'R2': r2_score(y_test, preds),
@@ -283,7 +300,7 @@ for pos in positions:
 pos_results_df = pd.DataFrame(pos_results)
 
 
-# In[10]:
+# In[11]:
 
 
 # ------------------------------
@@ -299,7 +316,7 @@ print("\nModel Summary:")
 print(summary_df)
 
 
-# In[11]:
+# In[12]:
 
 
 # ==========================================================
@@ -425,51 +442,37 @@ plt.show()
 # 8.4 PLAYER-LEVEL INSIGHTS – REAL-WORLD TAKEAWAYS
 # ==========================================================
 
-# ===== Ensure Unique Player Identifier BEFORE any merge or join =====
-if "Unique_ID" not in NHL_data.columns:
-    NHL_data["Unique_ID"] = (
-        NHL_data["Player_Name"].astype(str)
-        + "_" + NHL_data["Team"].astype(str)
-        + "_" + NHL_data["Age"].astype(str)
-        + "_" + NHL_data["Pos"].astype(str)
-    )
+## (a) Predicted Salary vs ATOI by Position
+pred_df_full = model_df.copy()
+pred_df_full["Predicted_AAV_M"] = final_model.predict(model_df.drop(columns=["AAV_M"]))
+pred_df_full["ATOI.min"] = NHL_data.loc[pred_df_full.index, "ATOI.min"]
+pred_df_full["Pos"] = NHL_data.loc[pred_df_full.index, "Pos"]
 
-# Carry Unique_ID into model_df so it stays aligned through splits
-model_df["Unique_ID"] = NHL_data["Unique_ID"]
+plt.figure(figsize=(8, 6))
+sns.scatterplot(data=pred_df_full, x="ATOI.min", y="Predicted_AAV_M", hue="Pos", alpha=0.7)
+plt.title("Predicted Salary vs Average Time on Ice by Position")
+plt.xlabel("ATOI (minutes per game)")
+plt.ylabel("Predicted AAV (Millions)")
+plt.legend(title="Position")
+plt.tight_layout()
+plt.show()
 
 # ==========================================================
 # 8.5 POSITION-SPECIFIC OVERPAID & UNDERPAID ANALYSIS
 # ==========================================================
 
-# Create pred_analysis_df with correct identity linkage
+# Prepare the main DataFrame with predictions and residuals
 pred_analysis_df = model_df.copy()
-
-pred_analysis_df["Predicted_AAV_M"] = final_model.predict(
-    model_df.drop(columns=["AAV_M", "Unique_ID"])
-)
-
-pred_analysis_df = pred_analysis_df.merge(
-    NHL_data[["Unique_ID", "Player_Name", "Age", "Team", "Pos", "PPG_Category"]],
-    on="Unique_ID", how="left"
-)
-
-# Residual (actual - predicted)
+pred_analysis_df["Predicted_AAV_M"] = final_model.predict(model_df.drop(columns=["AAV_M"]))
+pred_analysis_df["PPG_Category"] = NHL_data.loc[pred_analysis_df.index, "PPG_Category"]
 pred_analysis_df["Residual_M"] = pred_analysis_df["AAV_M"] - pred_analysis_df["Predicted_AAV_M"]
 
-# Merge metadata using Unique_ID instead of index alignment
-pred_analysis_df = pred_analysis_df.merge(
-    NHL_data[["Unique_ID", "Player_Name", "Team", "Pos", "PPG_Category"]],
-    on="Unique_ID",
-    how="left"
-)
+# Add player metadata
+pred_analysis_df["Player_Name"] = NHL_data.loc[pred_analysis_df.index, "Player_Name"]
+pred_analysis_df["Team"] = NHL_data.loc[pred_analysis_df.index, "Team"]
+pred_analysis_df["Pos"] = NHL_data.loc[pred_analysis_df.index, "Pos"]
 
-# Clean up duplicates if any remain
-#pred_analysis_df = pred_analysis_df.drop_duplicates(subset="Unique_ID")
-
-# ==========================================================
-# PLOT OVERPAID & UNDERPAID PLAYERS BY POSITION
-# ==========================================================
-
+# Define plotting function
 def plot_position_salary_outliers(position_name, df):
     subset = df[df["Pos"] == position_name]
     if subset.empty:
@@ -478,7 +481,7 @@ def plot_position_salary_outliers(position_name, df):
     top_over = subset.nlargest(10, "Residual_M")[["Player_Name", "Team", "AAV_M", "Predicted_AAV_M", "Residual_M"]]
     top_under = subset.nsmallest(10, "Residual_M")[["Player_Name", "Team", "AAV_M", "Predicted_AAV_M", "Residual_M"]]
 
-    # Overpaid
+    # --- Overpaid ---
     plt.figure(figsize=(9, 5))
     sns.barplot(data=top_over, y="Player_Name", x="Residual_M", color="crimson")
     plt.axvline(0, color="black", linestyle="--")
@@ -488,7 +491,7 @@ def plot_position_salary_outliers(position_name, df):
     plt.tight_layout()
     plt.show()
 
-    # Underpaid
+    # --- Underpaid ---
     plt.figure(figsize=(9, 5))
     sns.barplot(data=top_under, y="Player_Name", x="Residual_M", color="steelblue")
     plt.axvline(0, color="black", linestyle="--")
@@ -498,7 +501,7 @@ def plot_position_salary_outliers(position_name, df):
     plt.tight_layout()
     plt.show()
 
-# Execute for each position
+# Run analysis for each unique position
 for pos in sorted(pred_analysis_df["Pos"].unique()):
     print(f"\n=== {pos} ===")
     plot_position_salary_outliers(pos, pred_analysis_df)
@@ -528,7 +531,7 @@ print(f"""
 """)
 
 
-# In[12]:
+# In[13]:
 
 
 # ==========================================================

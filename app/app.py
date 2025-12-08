@@ -403,6 +403,287 @@ def update_underpaid_chart(selected_pos):
     fig.update_traces(textposition="outside")
     return fig
 
+# --------------------------------------------------------------
+# 9. Trade Analyzer Tab – Compare Predicted Value Between Teams
+# --------------------------------------------------------------
+
+# Safety: ensure Unique_ID exists (if you haven't already earlier)
+if "Unique_ID" not in player_df.columns:
+    player_df["Unique_ID"] = (
+        player_df["Player_Name"].astype(str)
+        + "_" + player_df["Team"].astype(str)
+        + "_" + player_df["Pos"].astype(str)
+    )
+
+# Team dropdown options
+trade_team_options = [
+    {"label": t, "value": t}
+    for t in sorted(player_df["Team"].dropna().unique())
+]
+
+trade_tab = dbc.Container([
+    html.H2("🔁 Trade Analyzer", className="fw-bold text-center my-4",
+            style={"color": "#1f3c5b"}),
+
+    html.P(
+        "Select two teams and choose players going each way. "
+        "The stacked bars show the total predicted salary value (Predicted AAV).",
+        className="text-center text-muted mb-4",
+        style={"fontSize": "0.95rem"}
+    ),
+
+    # --- Team selectors + player selectors ---
+    dbc.Row([
+        # TEAM 1 PANEL
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader(html.H4("Team 1 Receives", className="mb-0")),
+                dbc.CardBody([
+                    html.Label("Team 1", style={"fontWeight": "bold"}),
+                    dcc.Dropdown(
+                        id="trade-team1",
+                        options=trade_team_options,
+                        placeholder="Select Team 1",
+                        clearable=True,
+                        style={"marginBottom": "1rem"}
+                    ),
+
+                    html.Label("Players to Team 1", style={"fontWeight": "bold"}),
+                    dcc.Dropdown(
+                        id="trade-players1",
+                        options=[],
+                        value=[],
+                        multi=True,
+                        placeholder="Select players from chosen team",
+                        style={"marginBottom": "1rem"}
+                    ),
+
+                    dash_table.DataTable(
+                        id="trade-table1",
+                        columns=[
+                            {"name": "Player", "id": "Player_Display"},
+                            {"name": "Pos", "id": "Pos"},
+                            {"name": "Predicted AAV (M)", "id": "Predicted_AAV_M",
+                             "type": "numeric", "format": {"specifier": ".2f"}},
+                        ],
+                        data=[],
+                        style_table={"overflowX": "auto"},
+                        style_cell={"textAlign": "left", "fontSize": 12},
+                        style_header={
+                            "backgroundColor": "#f1f1f1",
+                            "fontWeight": "bold"
+                        },
+                        style_data_conditional=[
+                            {"if": {"row_index": "odd"},
+                             "backgroundColor": "#fafafa"}
+                        ],
+                        page_size=10
+                    ),
+                ])
+            ], style={"boxShadow": "0 4px 8px rgba(0,0,0,0.05)",
+                      "borderRadius": "10px"})
+        ], md=6),
+
+        # TEAM 2 PANEL
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader(html.H4("Team 2 Receives", className="mb-0")),
+                dbc.CardBody([
+                    html.Label("Team 2", style={"fontWeight": "bold"}),
+                    dcc.Dropdown(
+                        id="trade-team2",
+                        options=trade_team_options,
+                        placeholder="Select Team 2",
+                        clearable=True,
+                        style={"marginBottom": "1rem"}
+                    ),
+
+                    html.Label("Players to Team 2", style={"fontWeight": "bold"}),
+                    dcc.Dropdown(
+                        id="trade-players2",
+                        options=[],
+                        value=[],
+                        multi=True,
+                        placeholder="Select players from chosen team",
+                        style={"marginBottom": "1rem"}
+                    ),
+
+                    dash_table.DataTable(
+                        id="trade-table2",
+                        columns=[
+                            {"name": "Player", "id": "Player_Display"},
+                            {"name": "Pos", "id": "Pos"},
+                            {"name": "Predicted AAV (M)", "id": "Predicted_AAV_M",
+                             "type": "numeric", "format": {"specifier": ".2f"}},
+                        ],
+                        data=[],
+                        style_table={"overflowX": "auto"},
+                        style_cell={"textAlign": "left", "fontSize": 12},
+                        style_header={
+                            "backgroundColor": "#f1f1f1",
+                            "fontWeight": "bold"
+                        },
+                        style_data_conditional=[
+                            {"if": {"row_index": "odd"},
+                             "backgroundColor": "#fafafa"}
+                        ],
+                        page_size=10
+                    ),
+                ])
+            ], style={"boxShadow": "0 4px 8px rgba(0,0,0,0.05)",
+                      "borderRadius": "10px"})
+        ], md=6),
+    ], className="mb-4"),
+
+    html.Hr(),
+
+    # --- Totals + stacked comparison chart ---
+    html.H3("Total Predicted Value (Millions)", className="fw-bold text-center mb-3",
+            style={"color": "#1f3c5b"}),
+
+    dcc.Graph(id="trade-bar-chart"),
+
+    dbc.Row([
+        dbc.Col(html.Div(id="trade-total-1", className="text-center fw-bold"), md=4),
+        dbc.Col(html.Div(id="trade-total-2", className="text-center fw-bold"), md=4),
+        dbc.Col(html.Div(id="trade-diff", className="text-center fw-bold"), md=4),
+    ], className="mt-3 mb-4"),
+], fluid=True)
+
+# --------------------------------------------------------------
+# Trade Analyzer Callbacks
+# --------------------------------------------------------------
+
+def _build_player_options_for_team(team_value):
+    """Helper: return dropdown options + default values for a given team."""
+    if not team_value:
+        return [], []
+
+    team_players = player_df[player_df["Team"] == team_value].copy()
+
+    # Build display column if not already present
+    if "Player_Display" not in team_players.columns:
+        team_players["Player_Display"] = (
+            team_players["Player_Name"] + " (" +
+            team_players["Pos"] + ", " +
+            team_players["Team"] + ")"
+        )
+
+    options = [
+        {
+            "label": row["Player_Display"],
+            "value": row["Unique_ID"]
+        }
+        for _, row in team_players.iterrows()
+    ]
+    return options, []  # default no pre-selected players
+
+
+@app.callback(
+    [
+        Output("trade-players1", "options"),
+        Output("trade-players1", "value"),
+        Output("trade-players2", "options"),
+        Output("trade-players2", "value"),
+    ],
+    [
+        Input("trade-team1", "value"),
+        Input("trade-team2", "value"),
+    ]
+)
+def update_trade_player_dropdowns(team1, team2):
+    opts1, vals1 = _build_player_options_for_team(team1)
+    opts2, vals2 = _build_player_options_for_team(team2)
+    return opts1, vals1, opts2, vals2
+
+
+@app.callback(
+    [
+        Output("trade-bar-chart", "figure"),
+        Output("trade-total-1", "children"),
+        Output("trade-total-2", "children"),
+        Output("trade-diff", "children"),
+        Output("trade-table1", "data"),
+        Output("trade-table2", "data"),
+    ],
+    [
+        Input("trade-players1", "value"),
+        Input("trade-players2", "value"),
+        Input("trade-team1", "value"),
+        Input("trade-team2", "value"),
+    ]
+)
+def update_trade_view(players1_ids, players2_ids, team1, team2):
+
+    # Normalize inputs
+    players1_ids = players1_ids or []
+    players2_ids = players2_ids or []
+
+    # Filter players
+    df1 = player_df[player_df["Unique_ID"].isin(players1_ids)].copy()
+    df2 = player_df[player_df["Unique_ID"].isin(players2_ids)].copy()
+
+    # Ensure Player_Display exists
+    for df in (df1, df2):
+        if not df.empty and "Player_Display" not in df.columns:
+            df["Player_Display"] = (
+                df["Player_Name"] + " (" +
+                df["Pos"] + ", " +
+                df["Team"] + ")"
+            )
+
+    # Compute totals (always floats)
+    total1 = float(df1["Predicted_AAV_M"].sum()) if not df1.empty else 0.0
+    total2 = float(df2["Predicted_AAV_M"].sum()) if not df2.empty else 0.0
+    diff = total1 - total2
+
+    # Build stacked bar data safely
+    bar_df_list = []
+    if not df1.empty:
+        t1name = team1 or "Team 1"
+        temp1 = df1[["Player_Name", "Predicted_AAV_M"]].copy()
+        temp1["Side"] = t1name
+        bar_df_list.append(temp1)
+
+    if not df2.empty:
+        t2name = team2 or "Team 2"
+        temp2 = df2[["Player_Name", "Predicted_AAV_M"]].copy()
+        temp2["Side"] = t2name
+        bar_df_list.append(temp2)
+
+    # ALWAYS build a figure
+    if bar_df_list:
+        bar_df = pd.concat(bar_df_list, ignore_index=True)
+        fig = px.bar(
+            bar_df,
+            x="Side",
+            y="Predicted_AAV_M",
+            color="Player_Name",
+            barmode="stack",
+            title="Stacked Predicted Salary Value by Side",
+            labels={"Predicted_AAV_M": "Predicted AAV (M)"}
+        )
+    else:
+        # SAFE fallback figure
+        fig = px.bar(title="Select players to compare value")
+
+    fig.update_layout(**CHART_LAYOUT)
+
+    # Safe text outputs
+    t1text = f"{team1 or 'Team 1'} Total: {total1:.2f} M"
+    t2text = f"{team2 or 'Team 2'} Total: {total2:.2f} M"
+    difftext = f"Difference (Team 1 - Team 2): {diff:+.2f} M"
+
+    # Tables ALWAYS exist (empty okay)
+    table1_data = df1[["Player_Display", "Pos", "Predicted_AAV_M"]].to_dict("records") if not df1.empty else []
+    table2_data = df2[["Player_Display", "Pos", "Predicted_AAV_M"]].to_dict("records") if not df2.empty else []
+
+    # RETURN ALL 6 OUTPUTS ALWAYS
+    return fig, t1text, t2text, difftext, table1_data, table2_data
+
+
+
+
 
 # --------------------------------------------------------------
 # 9. Team Salary Efficiency Overview Tab + Standings Bubble View
@@ -937,6 +1218,7 @@ app.layout = dbc.Container([
         dbc.Tab(label="Player Predictions", children=[player_tab], activeTabClassName="fw-bold"),
         dbc.Tab(label="Underpaid Players", children=[tab3], activeTabClassName="fw-bold"),
         dbc.Tab(label="Team Analysis", children=[team_tab], activeTabClassName="fw-bold"),
+        dbc.Tab(label="Trade Analyzer", children=[trade_tab], activeTabClassName="fw-bold"),
     ], className="mb-3"),
 
     html.Footer([
