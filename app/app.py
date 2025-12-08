@@ -959,11 +959,16 @@ def prepare_summary_data(player_df, merged_team, selected_team=None):
     If selected_team is provided, results are filtered to that team.
     """
 
+    player_df['Residual_M'] = pd.to_numeric(player_df['Residual_M'], errors='coerce')
+
+
     # Filter to selected team if provided
     if selected_team:
         df = player_df[player_df["Team"] == selected_team].copy()
     else:
         df = player_df.copy()
+
+    df['Residual_M'] = pd.to_numeric(df['Residual_M'], errors='coerce')
 
     # Top 5 Overpaid
     top_overpaid = (
