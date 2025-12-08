@@ -4,8 +4,9 @@ from nbconvert import PythonExporter
 from nbconvert.preprocessors import ExecutePreprocessor
 
 # --- CONFIG ---
-NOTEBOOK_PATH = r"C:\Users\tlcon\OneDrive\Documents\GitHub\NHL_Data\NHL_Data_project.ipynb"
-OUTPUT_DIR = "data"
+NOTEBOOK_PATH = "./NHL_Data_project.ipynb"
+OUTPUT_DIR = "./app/data"
+MODELS_DIR = "./app/models"
 
 # --- Ensure paths exist ---
 os.makedirs(OUTPUT_DIR, exist_ok=True)
