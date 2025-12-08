@@ -85,8 +85,9 @@ def load_data():
     return summary_df, pos_results_df, player_preds_df
 
 
-summary_df, pos_results_df, player_preds_df = load_data()
 
+summary_df, pos_results_df, player_preds_df = load_data()
+player_preds_df['Residual_M'] = pd.to_numeric(player_preds_df['Residual_M'], errors='coerce')
 # --------------------------------------------------------------
 # 4. KPI Cards
 # --------------------------------------------------------------
