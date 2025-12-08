@@ -542,7 +542,6 @@ print(f"""
 # ==========================================================
 # 9. EXPORT DATA AND MODELS FOR DASH APP
 # ==========================================================
-
 import joblib
 import os
 
@@ -554,12 +553,10 @@ os.makedirs("./app/models", exist_ok=True)
 summary_df.to_csv("./app/data/model_summary.csv", index=False)
 pos_results_df.to_csv("./app/data/position_r2.csv", index=False)
 pred_analysis_df.to_csv("./app/data/player_predictions.csv", index=False)
-
 print("✅ Exported data files to /app/data folder")
 
 # ---- Save trained models ----
 joblib.dump(ridge_best, "./app/models/ridge_model.pkl")
 joblib.dump(lasso_best, "./app/models/lasso_model.pkl")
-
 print("✅ Exported models to /app/models folder")
 
