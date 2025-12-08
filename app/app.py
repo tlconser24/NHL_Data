@@ -992,30 +992,26 @@ def prepare_summary_data(player_df, merged_team, selected_team=None):
     If selected_team is provided, results are filtered to that team.
     """
 
-    player_df['Residual_M'] = pd.to_numeric(player_df['Residual_M'], errors='coerce')
+    # Determine the correct team column name
+    team_column = next((col for col in merged_team.columns if col.lower() in ['team', 'teams', 'team_name']), None)
+    total_spend_column = next((col for col in merged_team.columns if 'total' in col.lower() or 'spend' in col.lower() or 'points' in col.lower()), None)
 
+    # Print debugging information
+    print("Merged Team Columns:", merged_team.columns.tolist())
+    print(f"Team Column: {team_column}")
+    print(f"Total Spend Column: {total_spend_column}")
 
-    # Filter to selected team if provided
-    if selected_team:
-        df = player_df[player_df["Team"] == selected_team].copy()
-    else:
-        df = player_df.copy()
+    # Ensure all relevant columns are numeric in player_df
+    numeric_columns = ['AAV_M', 'Predicted_AAV_M', 'Residual_M']
+    for col in numeric_columns:
+        player_df[col] = pd.to_numeric(player_df[col], errors='coerce')
 
-    df['Residual_M'] = pd.to_numeric(df['Residual_M'], errors='coerce')
+    # Compute Residual_M if not already present
+    if 'Residual_M' not in player_df.columns:
+        player_df['Residual_M'] = player_df['AAV_M'] - player_df['Predicted_AAV_M']
+        player_df['Residual_M'] = pd.to_numeric(player_df['Residual_M'], errors='coerce')
 
-    # Top 5 Overpaid
-    top_overpaid = (
-        df[df["Residual_M"] > 0]
-        .nlargest(5, "Residual_M")[["Player_Name", "Team","Pos", "AAV_M", "Predicted_AAV_M", "Residual_M"]]
-    )
-
-    # Top 5 Underpaid
-    top_underpaid = (
-        df[df["Residual_M"] < 0]
-        .nsmallest(5, "Residual_M")[["Player_Name", "Team", "Pos","AAV_M", "Predicted_AAV_M", "Residual_M"]]
-    )
-
-    # Playoff team salary stats remain unchanged
+    # Playoff teams (use top 16 teams by points if possible)
     playoff_teams = [
         "Winnipeg Jets", "Dallas Stars", "Vegas Golden Knights", "Edmonton Oilers",
         "St. Louis Blues", "Colorado Avalanche", "Minnesota Wild", "Los Angeles Kings",
@@ -1024,12 +1020,59 @@ def prepare_summary_data(player_df, merged_team, selected_team=None):
         "New Jersey Devils", "Montréal Canadiens"
     ]
 
-    playoff_team_salaries = merged_team[merged_team['team'].isin(playoff_teams)]['Total_Spend_M']
-    
+    # Fallback for playoff team salaries
+    playoff_team_salaries = pd.Series([0])
+
+    # If we have a valid team and total spend column, filter and calculate
+    if team_column and total_spend_column:
+        # Try to filter playoff teams
+        playoff_team_subset = merged_team[merged_team[team_column].isin(playoff_teams)]
+        
+        # Use points or total spend column
+        playoff_team_salaries = playoff_team_subset[total_spend_column] if not playoff_team_subset.empty else pd.Series([0])
+
+    # Filter to selected team if provided
+    if selected_team:
+        df = player_df[player_df["Team"] == selected_team].copy()
+    else:
+        df = player_df.copy()
+
+    # Remove rows with NaN in critical columns
+    df = df.dropna(subset=['Residual_M', 'AAV_M', 'Predicted_AAV_M'])
+
+    # Ensure we have data after filtering
+    if df.empty:
+        return (
+            pd.DataFrame(columns=["Player_Name", "Team", "Pos", "AAV_M", "Predicted_AAV_M", "Residual_M"]),
+            pd.DataFrame(columns=["Player_Name", "Team", "Pos", "AAV_M", "Predicted_AAV_M", "Residual_M"]),
+            {"Min Playoff Salary": 0, "Max Playoff Salary": 0, "Avg Playoff Salary": 0, "Playoff Teams Count": len(playoff_teams)}
+        )
+
+    # Top 5 Overpaid
+    try:
+        top_overpaid = (
+            df[df["Residual_M"] > 0]
+            .nlargest(5, "Residual_M")[["Player_Name", "Team", "Pos", "AAV_M", "Predicted_AAV_M", "Residual_M"]]
+        )
+    except Exception:
+        # Fallback method if nlargest fails
+        top_overpaid = df[df["Residual_M"] > 0].head(5)[["Player_Name", "Team", "Pos", "AAV_M", "Predicted_AAV_M", "Residual_M"]]
+
+    # Top 5 Underpaid
+    try:
+        top_underpaid = (
+            df[df["Residual_M"] < 0]
+            .nsmallest(5, "Residual_M")[["Player_Name", "Team", "Pos", "AAV_M", "Predicted_AAV_M", "Residual_M"]]
+        )
+    except Exception:
+        # Fallback method if nsmallest fails
+        top_underpaid = df[df["Residual_M"] < 0].head(5)[["Player_Name", "Team", "Pos", "AAV_M", "Predicted_AAV_M", "Residual_M"]]
+
+    # Team salary stats
     team_salary_stats = {
-        'Min Playoff Salary': playoff_team_salaries.min(),
-        'Max Playoff Salary': playoff_team_salaries.max(),
-        'Avg Playoff Salary': playoff_team_salaries.mean(),
+        'Min Playoff Salary': playoff_team_salaries.min() if not playoff_team_salaries.empty else 0,
+        'Max Playoff Salary': playoff_team_salaries.max() if not playoff_team_salaries.empty else 0,
+        'Avg Playoff Salary': playoff_team_salaries.mean() if not playoff_team_salaries.empty else 0,
         'Playoff Teams Count': len(playoff_teams)
     }
 
