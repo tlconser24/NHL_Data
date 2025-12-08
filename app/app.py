@@ -95,16 +95,23 @@ def load_data():
         summary_df = pd.read_csv(os.path.join(DATA_PATH, "model_summary.csv"))
         pos_results_df = pd.read_csv(os.path.join(DATA_PATH, "position_r2.csv"))
         player_preds_df = pd.read_csv(os.path.join(DATA_PATH, "player_predictions.csv"))
+        merged_team = load_team_standings()
 
-        pos_map = {0: "C", 1: "D", 3: "LW", 4: "RW"}
-        pos_results_df["Position"] = pos_results_df["Pos_encoded"].map(pos_map)
+        # Ensure necessary columns exist
+        required_columns = ['Player_Name', 'Team', 'Pos', 'AAV_M', 'Predicted_AAV_M']
+        for col in required_columns:
+            if col not in player_preds_df.columns:
+                print(f"Warning: Missing column {col}")
+                player_preds_df[col] = None  # Add placeholder column
 
-    except FileNotFoundError:
+    except FileNotFoundError as e:
+        print(f"Data file not found: {e}")
         summary_df = pd.DataFrame(columns=["Model", "R2", "RMSE"])
-        pos_results_df = pd.DataFrame(columns=["Pos_encoded", "R2", "RMSE", "Position"])
-        player_preds_df = pd.DataFrame(columns=["Player_Name", "Team", "Pos", "AAV_M", "Predicted_AAV_M", "Residual_M"])
+        pos_results_df = pd.DataFrame(columns=["Pos_encoded", "R2", "RMSE"])
+        player_preds_df = pd.DataFrame(columns=['Player_Name', 'Team', 'Pos', 'AAV_M', 'Predicted_AAV_M'])
+        merged_team = pd.DataFrame()
 
-    return summary_df, pos_results_df, player_preds_df
+    return summary_df, pos_results_df, player_preds_df, merged_team
 
 
 
