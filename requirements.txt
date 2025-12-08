@@ -12,4 +12,3 @@ jupyter
 gunicorn
 joblib
 nhl-api-py
-client
