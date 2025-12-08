@@ -466,6 +466,8 @@ pred_analysis_df = model_df.copy()
 pred_analysis_df["Predicted_AAV_M"] = final_model.predict(model_df.drop(columns=["AAV_M"]))
 pred_analysis_df["PPG_Category"] = NHL_data.loc[pred_analysis_df.index, "PPG_Category"]
 pred_analysis_df["Residual_M"] = pred_analysis_df["AAV_M"] - pred_analysis_df["Predicted_AAV_M"]
+# Ensure it's a numeric column
+pred_analysis_df["Residual_M"] = pd.to_numeric(pred_analysis_df["Residual_M"], errors='coerce')
 
 # Add player metadata
 pred_analysis_df["Player_Name"] = NHL_data.loc[pred_analysis_df.index, "Player_Name"]
