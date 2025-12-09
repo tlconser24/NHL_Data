@@ -650,6 +650,17 @@ trade_tab = dbc.Container(
                                                     "type": "numeric",
                                                     "format": {"specifier": ".2f"},
                                                 },
+                                                {"name": "Actual AAV (M)",
+                                                 "id": "AAV_M",
+                                                 "type": "numeric",
+                                                 "format": {"specifier": ".2f"},
+                                                },
+                                                {"name": "Points per Game",
+                                                 "id": "Points_per_game",
+                                                 "type": "numeric",
+                                                 "format": {"specifier": ".2f"},
+                                                },
+                                                
                                             ],
                                             data=[],
                                             style_table={"overflowX": "auto"},
@@ -725,6 +736,16 @@ trade_tab = dbc.Container(
                                                     "id": "Predicted_AAV_M",
                                                     "type": "numeric",
                                                     "format": {"specifier": ".2f"},
+                                                },
+                                                {"name": "Actual AAV (M)",
+                                                 "id": "AAV_M",
+                                                 "type": "numeric",
+                                                 "format": {"specifier": ".2f"},
+                                                },
+                                                {"name": "Points per Game",
+                                                 "id": "Points_per_game",
+                                                 "type": "numeric",
+                                                 "format": {"specifier": ".2f"},
                                                 },
                                             ],
                                             data=[],
@@ -898,12 +919,12 @@ def update_trade_view(players1_ids, players2_ids, team1, team2):
     difftext = f"Difference (Team 1 - Team 2): {diff:+.2f} M"
 
     table1_data = (
-        df1[["Player_Display", "Pos", "Predicted_AAV_M"]].to_dict("records")
+        df1[["Player_Display", "Pos", "Predicted_AAV_M","AAV_M","Points_per_game"]].to_dict("records")
         if not df1.empty
         else []
     )
     table2_data = (
-        df2[["Player_Display", "Pos", "Predicted_AAV_M"]].to_dict("records")
+        df2[["Player_Display", "Pos", "Predicted_AAV_M","AAV_M","Points_per_game"]].to_dict("records")
         if not df2.empty
         else []
     )
@@ -1127,34 +1148,34 @@ def update_cap_efficiency_chart(selected_conf, selected_group):
     )
 
     fig.add_vline(
-        x=78,
+        x=70,
         line_dash="dot",
         line_color="gray",
         line_width=2,
-        annotation_text="Lower Playoff Spend Threshold ($78M)",
+        annotation_text="Lower Playoff Spend Threshold ($70M)",
         annotation_position="bottom left",
     )
 
     fig.add_vline(
-        x=97,
+        x=96,
         line_dash="dot",
         line_color="gray",
         line_width=2,
-        annotation_text="Upper Playoff Spend Threshold ($97M)",
+        annotation_text="Upper Playoff Spend Threshold ($96M)",
         annotation_position="bottom right",
     )
 
     fig.add_shape(
         type="line",
-        x0=78,
-        x1=97,
+        x0=70,
+        x1=96,
         y0=91,
         y1=91,
         line=dict(color="gray", width=2, dash="dot"),
     )
 
     fig.add_annotation(
-        x=(78 + 97) / 2,
+        x=(70 + 96) / 2,
         y=91,
         text="Playoff Performance Threshold (91 Points)",
         showarrow=False,
